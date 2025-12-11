@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 import io
+import re
 import sys
-
 
 # ---------------------------
 # Streamlit UI
@@ -648,11 +648,53 @@ if uploaded_file:
             tech_cols = ["Technical_Point_Raiding_Team", "Technical_Point_Defending_Team"]
             df[tech_cols] = df[tech_cols].apply(pd.to_numeric, errors="coerce").astype("Int64")
 
+
+
             ######## Quality Check #########
 
-            # QC 1: Empty Columns (Robust Version)
 
-            cols_qc1 = [
+            # QC 1: Sequence Raid (Event) Check.
+
+            def check_event_sequence(df):
+                pattern = re.compile(r"Raid\s+(\d+)")
+                errors_found = False
+
+                # Extract the integer portion or None
+                numbers = []
+                for val in df['Event_Number']:
+                    if isinstance(val, str):
+                        match = pattern.match(val.strip())
+                        numbers.append(int(match.group(1)) if match else None)
+                    else:
+                        numbers.append(None)
+
+                # Sequence checking
+                for i in range(1, len(numbers)):
+                    prev_val = numbers[i - 1]
+                    curr_val = numbers[i]
+                    row = df.iloc[i]
+
+                    # Case 1: Blank or invalid after a valid raid
+                    if prev_val is not None and curr_val is None:
+                        print(f"❌ {row['Event_Number']}: Check RAW CSV and Update.\n")
+                        errors_found = True
+                        continue
+
+                    # Case 2: Numeric sequence mismatch
+                    if prev_val is not None and curr_val is not None:
+                        if curr_val != prev_val + 1:
+                            print(f"❌ {row['Event_Number']}: Check RAW CSV and Update.\n")
+                            errors_found = True
+
+                if not errors_found:
+                    print("QC 1: ✅ All rows are correct.\n")
+
+            check_event_sequence(df)
+
+
+            # QC 2: Empty Columns (Robust Version)
+
+            cols_qc2 = [
                 'Raid_Length', 'Outcome', 'Bonus', 'All_Out', 'Half', 'Raid_Number', 'Raider_Name', 'Number_of_Defenders',
                 'Technical_Point_Raiding_Team', 'Technical_Point_Defending_Team', 'Tie_Break_Raids'
             ]
@@ -667,7 +709,7 @@ if uploaded_file:
                 return False
 
             # Apply function to all columns of interest
-            mask = df[cols_qc1].applymap(is_empty)
+            mask = df[cols_qc2].applymap(is_empty)
 
             # Find rows with any empty column
             invalid_rows = df[mask.any(axis=1)]
@@ -677,11 +719,11 @@ if uploaded_file:
                     empty_cols = mask.loc[idx][mask.loc[idx]].index.tolist()
                     print(f"\n❌ {row['Event_Number']}: Empty in columns → {', '.join(empty_cols)}. Please check and update.\n")
             else:
-                print("\nQC 1: ✅ All rows are completely filled.\n")
+                print("\nQC 2: ✅ All rows are completely filled.\n")
 
 
             
-            # QC 2: Whem Outcome = Empty These Columns (cols_qc2) must be Empty.
+            # QC 3: Whem Outcome = Empty These Columns (cols_qc3) must be Empty.
 
             # Ensure the columns we are checking numerically are actually numbers.
             # This is the key fix for the incorrect error messages.
@@ -691,15 +733,15 @@ if uploaded_file:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
 
 
-            cols_qc2 = ['Defender_1_Name', 'Defender_2_Name', 'Defender_3_Name', 'Defender_4_Name', 'Defender_5_Name', 'Defender_6_Name',
+            cols_qc3 = ['Defender_1_Name', 'Defender_2_Name', 'Defender_3_Name', 'Defender_4_Name', 'Defender_5_Name', 'Defender_6_Name',
                         'Defender_7_Name', 'Attacking_Skill', 'Defensive_Skill', 'Counter_Action_Skill', 'Zone_of_Action','Defender_Position', 'QoD_Skill']
             
-            cols_empty_qc2 = df[cols_qc2].replace('', pd.NA).isna().all(axis=1)
-
+            cols_empty_qc3 = df[cols_qc3].replace('', pd.NA).isna().all(axis=1)
+    
             # This mask will now work correctly because the data types are correct
-            mask_qc2_invalid = (
+            mask_qc3_invalid = (
                 (df['Outcome'] == 'Empty') & ~(
-                    cols_empty_qc2 &
+                    cols_empty_qc3 &
                     (df['All_Out'] == 0) &
                     (df['Raiding_Team_Points'] == 0) &
                     (df['Defending_Team_Points'] == 0) &
@@ -707,11 +749,11 @@ if uploaded_file:
                 )
             )
 
-            if mask_qc2_invalid.any():
-                for idx, row in df[mask_qc2_invalid].iterrows():
+            if mask_qc3_invalid.any():
+                for idx, row in df[mask_qc3_invalid].iterrows():
                     issues = []
                     
-                    non_empty_cols = row[cols_qc2].replace('', pd.NA).dropna().index.tolist()
+                    non_empty_cols = row[cols_qc3].replace('', pd.NA).dropna().index.tolist()
                     if non_empty_cols:
                         issues.append(f"these columns should be empty: {', '.join(non_empty_cols)}")
 
@@ -727,27 +769,28 @@ if uploaded_file:
                     issue_string = '; '.join(issues)
                     print(f"❌ {row['Event_Number']}: → When Outcome is 'Empty', → {issue_string}.\n")
             else:
-                print("QC 2: ✅ All rows meet conditions for Outcome = 'Empty'.\n")
+                print("QC 3: ✅ All rows meet conditions for Outcome = 'Empty'.\n")
 
 
-            # QC 3: Successful / Unsuccessful with Bonus = No & Raider_Self_Out = 0
+            # QC 4: Successful / Unsuccessful with Bonus = No & Raider_Self_Out = 0
 
-            cols_qc3 = ['Defender_1_Name', 'Number_of_Defenders', 'Zone_of_Action']
+            cols_qc4 = ['Defender_1_Name', 'Number_of_Defenders', 'Zone_of_Action']
             non_empty_outcomes = (
                 df['Outcome'].isin(['Successful', 'Unsuccessful'])
             ) & (df['Bonus'] == 'No') & (df['Raider_Self_Out'] == 0)
-            cols_filled_qc3 = df[cols_qc3].replace('', pd.NA).notna().all(axis=1)
-            mask_qc3_invalid = non_empty_outcomes & ~cols_filled_qc3
-            if mask_qc3_invalid.any():
-                for idx, row in df[mask_qc3_invalid].iterrows():
-                    empty_cols = row[cols_qc3].replace('', pd.NA).isna()
+            cols_filled_qc4 = df[cols_qc4].replace('', pd.NA).notna().all(axis=1)
+            mask_qc4_invalid = non_empty_outcomes & ~cols_filled_qc4
+            if mask_qc4_invalid.any():
+                for idx, row in df[mask_qc4_invalid].iterrows():
+                    empty_cols = row[cols_qc4].replace('', pd.NA).isna()
                     missing_cols = empty_cols[empty_cols].index.tolist()
+
                     print(f"❌ {row['Event_Number']}: When Outcome='{row['Outcome']}', Bonus='No', Raider_Self_Out = 'No' → Missing: {', '.join(missing_cols)}.\n")
             else:
-                print("QC 3: ✅ All rows are Valid.\n")
+                print("QC 4: ✅ All rows are Valid.\n")
 
 
-            # QC 4: If Raid_Number = 3 then row at index -2 must have Outcome == 'Empty'
+            # QC 5: If Raid_Number = 3 then row at index -2 must have Outcome == 'Empty'
             error_found = False
             
             for idx, row in df.iterrows():
@@ -765,12 +808,12 @@ if uploaded_file:
             
             # Final message
             if not error_found:
-                print("QC 4: ✅ All rows are Valid.\n")
+                print("QC 5: ✅ All rows are Valid.\n")
 
                     # If target_idx < 0, just skip silently
 
     
-            # QC 5: If Raid_Number = 1 & Outcome = 'Empty', then row at index +2 must have Raid_Number = 2
+            # QC 6: If Raid_Number = 1 & Outcome = 'Empty', then row at index +2 must have Raid_Number = 2
             error_found = False
 
             for idx, row in df.iterrows():
@@ -785,10 +828,10 @@ if uploaded_file:
 
             # Final message
             if not error_found:
-                print("QC 5: ✅ All rows are Valid.\n")
+                print("QC 6: ✅ All rows are Valid.\n")
 
 
-            # QC 6: If Outcome = 'Successful or Unsuccessful', then row at index +2 must have Raid_Number = 1
+            # QC 7: If Outcome = 'Successful or Unsuccessful', then row at index +2 must have Raid_Number = 1
 
             # Reset index to make position-based indexing safe
             df2 = df.reset_index(drop=True)
@@ -821,10 +864,10 @@ if uploaded_file:
 
             # Final message if no errors were found
             if not error_found:
-                print("QC 6: ✅ All rows are Valid.\n")
+                print("QC 7: ✅ All rows are Valid.\n")
 
 
-            # QC 7: if Raid_Number = 2 & Outcome = 'Empty', then row at index -2 must have Raid_Number = 1 & Outcome = 'Empty'
+            # QC 8: if Raid_Number = 2 & Outcome = 'Empty', then row at index -2 must have Raid_Number = 1 & Outcome = 'Empty'
             
             errors_found = False
 
@@ -841,10 +884,10 @@ if uploaded_file:
                             errors_found = True
 
             if not errors_found:
-                print("QC 7: ✅ All rows are correct.\n")
+                print("QC 8: ✅ All rows are correct.\n")
 
 
-            # QC 8: Attacking & Defensive Points match
+            # QC 9: Attacking & Defensive Points match
 
             def check_points(cols, total_col, label):
                 # print(f"\nChecking {label} → '{total_col}'")
@@ -853,7 +896,7 @@ if uploaded_file:
                     for idx, row in df[mismatch].iterrows():
                         print(f"❌ {row['Event_Number']}: → {label} mismatch (Expected: {df.loc[idx, cols].sum()}, Found: {row[total_col]})\n")
                 else:
-                    print(f"QC 8: ✅ All rows are correct for {label}\n")
+                    print(f"QC 9: ✅ All rows are correct for {label}\n")
 
             check_points(
                 ['Raiding_Touch_Points','Raiding_Bonus_Points','Raiding_Self_Out_Points','Raiding_All_Out_Points','Technical_Point_Raiding_Team'],
@@ -866,7 +909,7 @@ if uploaded_file:
                 label="Defensive Points"
             )
 
-            # QC 9: Outcome == Successful/Unsuccessful must have points
+            # QC 10: Outcome == Successful/Unsuccessful must have points
 
             def check_points_nonzero(df, outcome, cols, team_name):
                 outcome_mask = df['Outcome'].eq(outcome)
@@ -876,7 +919,7 @@ if uploaded_file:
                     for raid_no in df.loc[problem_mask, 'Event_Number'].astype(str):
                         print(f"❌ {team_name}: Raid {raid_no} — Outcome is '{outcome}', but no points were given.\n")
                 else:
-                    print(f"QC 9: ✅ All {team_name} ({outcome}) rows are correct.\n")
+                    print(f"QC 10: ✅ All {team_name} ({outcome}) rows are correct.\n")
 
             check_points_nonzero(
                 df, 'Successful',
@@ -887,17 +930,17 @@ if uploaded_file:
                 ['Defending_Capture_Points', 'Defending_Bonus_Points', 'Defending_Self_Out_Points', 'Defending_All_Out_Points'], 'Defending'
             )
 
-            # QC 10: Defending_Self_Out_Points > 1
+            # QC 11: Defending_Self_Out_Points > 1
 
             mismatch = df['Defending_Self_Out_Points'] > 1
             if mismatch.any():
                 for msg in "❌ " + df.loc[mismatch, 'Event_Number'].astype(str) + "  Check 'Raider self out'\n":
                     print(msg)
             else:
-                print('QC 10: ✅ All rows are correct.\n')
+                print('QC 11: ✅ All rows are correct.\n')
 
 
-            # QC 11: Raid_Length should be > 2
+            # QC 12: Raid_Length should be > 2
             errors_found = False
             
             for idx, row in df.iterrows():
@@ -905,10 +948,10 @@ if uploaded_file:
                     print(f"⚠️ {row['Event_Number']}: Raid_Length is {row['Raid_Length']}\n")
                     errors_found = True
             if not errors_found:
-                print("QC 11: ✅ All rows have valid Raid_Length values.\n")
+                print("QC 12: ✅ All rows have valid Raid_Length values.\n")
 
 
-            # QC 12: Number_of_Defenders should be > 0
+            # QC 13: Number_of_Defenders should be > 0
             errors_found = False
             
             for idx, row in df.iterrows():
@@ -916,10 +959,10 @@ if uploaded_file:
                     print(f"❌ {row['Event_Number']}: Number_of_Defenders is --> {row['Number_of_Defenders']}, Check \n")
                     errors_found = True
             if not errors_found:
-                print("QC 12: ✅ All rows have valid Number_of_Defenders values.\n")
+                print("QC 13: ✅ All rows have valid Number_of_Defenders values.\n")
 
 
-            # QC 13: Successful, No Bonus, No Defenders Self Out all 3 skills 
+            # QC 14: Successful, No Bonus, No Defenders Self Out all 3 skills 
 
             fil_df = df[
                 (df['Outcome'] == 'Successful') &
@@ -957,10 +1000,10 @@ if uploaded_file:
 
             # If neither issue exists
             if qc_wrong_rows.empty and all_empty_rows.empty:
-                print("QC 13: ✅ All rows are correct.\n")
+                print("QC 14: ✅ All rows are correct.\n")
 
             
-            # QC 14: Outcome = Unsuccessful -> Defensive_Skill must NOT be empty
+            # QC 15: Outcome = Unsuccessful -> Defensive_Skill must NOT be empty
             qc_violations = df[
                 (df['Outcome'] == 'Unsuccessful') &
                 (df['Defensive_Skill'].isna() | (df['Defensive_Skill'].str.strip() == ''))
@@ -969,10 +1012,10 @@ if uploaded_file:
                 for idx, row in qc_violations.iterrows():
                     print(f"❌ {row['Event_Number']}: Outcome is 'Unsuccessful' and 'Defensive_Skill' is empty.\n")
             else:
-                print("QC 14: ✅ All rows are correct.\n")
+                print("QC 15: ✅ All rows are correct.\n")
 
 
-            # QC 15: Outcome = Successful & Bonus = No -> Defensive_Skill & Counter_Action_Skill both must NOT be empty or both must be empty
+            # QC 16: Outcome = Successful & Bonus = No -> Defensive_Skill & Counter_Action_Skill both must NOT be empty or both must be empty
 
             # Helper function (must be defined)
             def is_empty(cell):
@@ -996,16 +1039,16 @@ if uploaded_file:
                 for idx, row in violations.iterrows():
                     print(f"❌ {row['Event_Number']}: 'Defensive_Skill' or 'Counter_Action_Skill' missing.\n")
             else:
-                print(f"QC 15: ✅ All rows are correct.\n")
+                print(f"QC 16: ✅ All rows are correct.\n")
 
 
-            # --- QC 16: Defender without Position & Position with Defenders---
+            # --- QC 17: Defender without Position & Position with Defenders---
 
             qc_failed_1 = df[(df["Defender_1_Name"].notna()) & (df["Defender_Position"].isna() | (df["Defender_Position"] == ""))]
             qc_failed_2 = df[(df["Defender_1_Name"].isna()) & (df["Defender_Position"].notna()) & (df["Defender_Position"] != "")]
 
             if qc_failed_1.empty and qc_failed_2.empty:
-                print("QC 16: ✅ All defender-position mappings are consistent.\n")
+                print("QC 17: ✅ All defender-position mappings are consistent.\n")
             else:
                 for event in qc_failed_1['Event_Number']:
                     print(f"❌ {event}: Defender(s) present but 'Defender_Position' is empty.\n")
@@ -1013,7 +1056,7 @@ if uploaded_file:
                     print(f"❌ {event}: 'Defender_Position' present but Defender(s) is empty.\n")
 
 
-            # --- QC 17: Defensive_Skill & QoD_Skill Alignment ---
+            # --- QC 18: Defensive_Skill & QoD_Skill Alignment ---
 
             # Exclude specific values of Defensive_Skill
             excluded_skills = ["Defender self out", "Raider self out"]
@@ -1035,7 +1078,7 @@ if uploaded_file:
             
             # Final check
             if qc_16_1.empty and qc_16_2.empty:
-                print("QC 17: ✅ Defensive_Skill and QoD_Skill are aligned correctly.\n")
+                print("QC 18: ✅ Defensive_Skill and QoD_Skill are aligned correctly.\n")
             else:
                 if not qc_16_1.empty:
                     print(f"❌ [Type 1]: {qc_16_1['Event_Number'].tolist()} → Defensive_Skill present but QoD_Skill missing.\n")
@@ -1043,7 +1086,7 @@ if uploaded_file:
                     print(f"❌ [Type 2]: {qc_16_2['Event_Number'].tolist()} → QoD_Skill present but Defensive_Skill missing.\n")
 
 
-            # --- QC 18: Bonus & Type of Bonus ---
+            # --- QC 19: Bonus & Type of Bonus ---
 
             # Normalize data
             df['Bonus'] = df['Bonus'].astype(str).str.strip().str.title()
@@ -1058,7 +1101,7 @@ if uploaded_file:
             
             # If-Else with detailed print statements
             if failed_rows.empty:
-                print("QC 18: ✅ All rows are correct!\n")
+                print("QC 19: ✅ All rows are correct!\n")
             else:
                 for _, row in failed_rows.iterrows():
                     if row['Bonus'] == 'Yes' and (row['Type_of_Bonus'] == '' or pd.isnull(row['Type_of_Bonus'])):
@@ -1068,7 +1111,7 @@ if uploaded_file:
                         print(f"❌ {row['Event_Number']}: Bonus is 'No' but Type_of_Bonus should be null.\n")
                         
 
-            # --- QC 19: When Outcome = 'Successful' or 'Unsuccessful', Zone_of_Action must not be empty ---
+            # --- QC 20: When Outcome = 'Successful' or 'Unsuccessful', Zone_of_Action must not be empty ---
 
             # Filter rows where Outcome is 'Successful' or 'Unsuccessful'
             zone_mask = df['Outcome'].isin(['Successful', 'Unsuccessful'])
@@ -1080,10 +1123,10 @@ if uploaded_file:
                 for _, row in empty_zone.iterrows():
                     print(f"❌ {row['Event_Number']}: →  Zone_of_Action is empty.\n")
             else:
-                print(" QC 19: ✅ All rows meet conditions for Outcome = 'Successful' or 'Unsuccessful'.\n")
+                print(" QC 20: ✅ All rows meet conditions for Outcome = 'Successful' or 'Unsuccessful'.\n")
 
 
-            # --- QC 20: When ['Defensive_Skill'] == 'Raider self out' these below 4 columns must be empty ---
+            # --- QC 21: When ['Defensive_Skill'] == 'Raider self out' these below 4 columns must be empty ---
 
             # Columns to check
             columns_to_check = ['QoD_Skill', 'Defender_1_Name', 'Defender_Position', 'Counter_Action_Skill']
@@ -1111,10 +1154,10 @@ if uploaded_file:
                     print(f"❌ {row['Event_Number']}: Found values in {', '.join(non_empty_cols)} — these must be empty when Defensive_Skill = 'Raider self out'.\n")
 
             else:
-                print("QC 20: ✅ All rows are correct.\n")
+                print("QC 21: ✅ All rows are correct.\n")
                 
 
-            # --- QC 21: When Outcome = 'Successful', Bonus = 'Yes', and Raiding_Team_Points = 1, all skill columns must be empty. ---
+            # --- QC 22: When Outcome = 'Successful', Bonus = 'Yes', and Raiding_Team_Points = 1, all skill columns must be empty. ---
 
             # Define the columns to check
             columns_to_check = ['Attacking_Skill', 'Defensive_Skill', 'QoD_Skill', 'Counter_Action_Skill']
@@ -1139,10 +1182,10 @@ if uploaded_file:
 
             # Final message
             if not issues_found:
-                print("QC 21: ✅ All rows are correct.\n")
+                print("QC 22: ✅ All rows are correct.\n")
 
 
-            # --- QC 22 QoD_Skill & Outcome Alignment Check ---
+            # --- QC 23 QoD_Skill & Outcome Alignment Check ---
 
             # --- 1. Define Boolean Masks ---
             # A value is considered "present" if the cell is not null, empty, or just whitespace.
@@ -1160,7 +1203,7 @@ if uploaded_file:
 
             # --- 3. Unified Final Check & Reporting ---
             if type_1_issues.empty and type_2_issues.empty:
-                print("QC 22: ✅ All skill and outcome alignments are correct.\n")
+                print("QC 23: ✅ All skill and outcome alignments are correct.\n")
             else:
                 # If any issues exist, report them specifically using the original messages.
                 if not type_1_issues.empty:
@@ -1168,6 +1211,38 @@ if uploaded_file:
 
                 if not type_2_issues.empty:
                     print(f"❌ {type_2_issues['Event_Number'].tolist()} → Raid is Successful but QoD_Skill is present, should be None.\n")
+
+
+            # --- QC 24: Half Column Check ---
+
+            def check_half_sequence(df):
+                errors_found = False
+                last_val = "First"  # Initialize with expected start value
+
+                # Zip is faster and avoids verbose .iloc indexing
+                for i, (val, evt) in enumerate(zip(df['Half'], df['Event_Number'])):
+                    
+                    # Check 1: Start Condition
+                    if i == 0 and val != "First":
+                        print(f"❌ {evt}: Sequence must start with 'First'.\n")
+                        errors_found = True
+                    
+                    # Check 2: Invalid Backtrack (Second -> First)
+                    elif last_val == "Second" and val == "First":
+                        print(f"❌ {evt}: Wrong value in 'Half'.\n")
+                        errors_found = True
+                        
+                    # Check 3: Garbage Values (anything not First or Second)
+                    elif val not in ["First", "Second"]:
+                        print(f"❌ {evt}: Invalid value in 'Half' column.\n")
+                        errors_found = True
+                    
+                    last_val = val
+
+                if not errors_found:
+                    print("QC 24: ✅ All rows are correct.\n")
+
+            check_half_sequence(df)
 
 # ======================================================================================            
             # Event_Number formatting
@@ -1239,5 +1314,3 @@ if uploaded_file:
         except Exception as e:
             sys.stdout = sys.__stdout__
             st.error(f"❌ An error occurred: {e}")
-
-
