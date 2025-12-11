@@ -1,2 +1,7 @@
 # Non-PKL-New-Dashboard
-A tool that converts raw, tagged Kabaddi event data from CSV files into clean and structured event datasets. It standardizes the input, resolves event attributes, and produces analysis-ready outputs for use in analytics, modeling, or downstream pipelines. This streamlines the process of turning manually tagged data into actionable insights.
+
+## Features
+- Convert raw Kabaddi tag data (CSV) into structured event records  
+- Apply consistent formatting and normalization across all fields  
+- Validate and clean noisy or incomplete rows  
+- Export analysis-ready datasets for analytics and modeling workflows  
