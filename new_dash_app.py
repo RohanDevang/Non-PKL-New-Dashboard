@@ -420,7 +420,7 @@ if uploaded_file:
             df['Season_ID'] = seas_id
             df['Match_No'] = match_no
             df['Match_ID'] = match_id
-            df['Match_Raid_Number'] = range(1, n + 1)
+            df['Match_Raid_Number'] = df["Event_Number"].str.extract(r'(\d+)').astype(int)
 
             
             # ---------------- Raider & Defenders Names ----------------
@@ -1314,3 +1314,4 @@ if uploaded_file:
         except Exception as e:
             sys.stdout = sys.__stdout__
             st.error(f"❌ An error occurred: {e}")
+
