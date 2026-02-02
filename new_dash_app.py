@@ -1244,6 +1244,28 @@ if uploaded_file:
 
             check_half_sequence(df)
 
+            # --- QC 25: Defender Self Out & Numbers Check ---
+
+            def qc_25_defender_self_out(df):
+                qc_failed = False
+
+                for _, row in df.iterrows():
+                    # Rule 1
+                    if row['Attacking_Skill'] == 'Defender self out' and row['Number_of_Defenders_Self_Out'] == 0:
+                        print(f"❌ {row['Event_Number']}: 'Defender self out' requires 'Number_of_Defenders_Self_Out' > 0. Please check.\n")
+                        
+                        qc_failed = True
+
+                    # Rule 2
+                    if row['Attacking_Skill'] != 'Defender self out' and row['Number_of_Defenders_Self_Out'] != 0:
+                        print(f"❌ {row['Event_Number']}: Attacking Skill is not 'Defender self out' then 'Number_of_Defenders_Self_Out' must be 0. Please check.\n")
+                        qc_failed = True
+
+                if not qc_failed:
+                    print("QC 25: ✅ All rows are correct.\n")
+
+            qc_25_defender_self_out(df)
+
 # ======================================================================================            
             # Event_Number formatting
             df['Event_Number'] = (
@@ -1314,4 +1336,5 @@ if uploaded_file:
         except Exception as e:
             sys.stdout = sys.__stdout__
             st.error(f"❌ An error occurred: {e}")
+
 
