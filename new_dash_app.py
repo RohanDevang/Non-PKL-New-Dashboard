@@ -1266,6 +1266,28 @@ if uploaded_file:
 
             qc_25_defender_self_out(df)
 
+            # --- QC 26: Defensive Skill and Defender Name Check ---
+
+            def defensive_skill_defender_name(df):
+                qc_failed = False
+
+                for _, row in df.iterrows():
+                    defensive_skill = row['Defensive_Skill']
+                    defender_name = row['Defender_1_Name']
+
+                    if (pd.notna(defensive_skill)
+                        and defensive_skill != 'Raider self out'
+                        and (pd.isna(defender_name) or str(defender_name).strip() == '')):
+
+                        qc_failed = True
+
+                        print(f"❌ {row['Event_Number']}: 'Defensive Skill' present but Defender_1_Name is missing")
+
+                if not qc_failed:
+                    print("QC 26: ✅ All rows are correct.\n")
+
+            defensive_skill_defender_name(df)
+
 # ======================================================================================            
             # Event_Number formatting
             df['Event_Number'] = (
@@ -1336,5 +1358,6 @@ if uploaded_file:
         except Exception as e:
             sys.stdout = sys.__stdout__
             st.error(f"❌ An error occurred: {e}")
+
 
 
