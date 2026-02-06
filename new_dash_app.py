@@ -1269,24 +1269,21 @@ if uploaded_file:
             # --- QC 26: Defensive Skill and Defender Name Check ---
 
             def defensive_skill_defender_name(df):
+                # Normalize empty and whitespace-only cells to NaN
+                df = df.replace(r'^\s*$', pd.NA, regex=True)
+            
                 qc_failed = False
-
+            
                 for _, row in df.iterrows():
                     defensive_skill = row['Defensive_Skill']
                     defender_name = row['Defender_1_Name']
-
-                    if (pd.notna(defensive_skill)
-                        and defensive_skill != 'Raider self out'
-                        and (pd.isna(defender_name) or str(defender_name).strip() == '')):
-
+            
+                    if (pd.notna(defensive_skill) and defensive_skill != 'Raider self out' and pd.isna(defender_name)):
                         qc_failed = True
-
                         print(f"❌ {row['Event_Number']}: 'Defensive Skill' present but Defender(s) is missing")
-
                 if not qc_failed:
                     print("QC 26: ✅ All rows are correct.\n")
 
-            defensive_skill_defender_name(df)
 
 # ======================================================================================            
             # Event_Number formatting
@@ -1358,6 +1355,7 @@ if uploaded_file:
         except Exception as e:
             sys.stdout = sys.__stdout__
             st.error(f"❌ An error occurred: {e}")
+
 
 
 
