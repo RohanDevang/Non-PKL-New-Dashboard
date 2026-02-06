@@ -1283,7 +1283,8 @@ if uploaded_file:
                         print(f"❌ {row['Event_Number']}: 'Defensive Skill' present but Defender(s) is missing")
                 if not qc_failed:
                     print("QC 26: ✅ All rows are correct.\n")
-
+                    
+            defensive_skill_defender_name(df)
 
 # ======================================================================================            
             # Event_Number formatting
@@ -1355,6 +1356,7 @@ if uploaded_file:
         except Exception as e:
             sys.stdout = sys.__stdout__
             st.error(f"❌ An error occurred: {e}")
+
 
 
 
