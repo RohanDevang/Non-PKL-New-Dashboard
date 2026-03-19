@@ -1313,8 +1313,8 @@ if uploaded_file:
                 errors_found = False
             
                 for _, row in df.iterrows():
-                    if (
-                        row['Outcome'] == 'Unsuccessful' and row['Attacking_Skill'] == 'Defender self out' and row['Defensive_Skill'] != 'Raider self out'):
+                    if (row['Outcome'] == 'Unsuccessful' and row['Attacking_Skill'] == 'Defender self out' and
+                        row['Defensive_Skill'] != 'Raider self out') and pd.isna(row['Defender_2_Name']) :
                             print(f"❌ {row['Event_Number']}: Defender 2 is NOT tagged.\n")
                             errors_found = True
             
