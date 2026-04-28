@@ -1261,7 +1261,7 @@ if uploaded_file:
 
             # Styles
             center_align = Alignment(horizontal="center", vertical="center")
-            header_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+            # header_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
             header_font = Font(bold=True)
             no_border = Border()
 
