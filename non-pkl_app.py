@@ -140,7 +140,7 @@ if uploaded_file:
                 df[col] = pd.to_numeric(df[col].astype(str).str.strip().replace('', '0'),
                                         errors='coerce').fillna(0).astype(int)
                 
-                df[col] = df[col].apply(lambda x: idx if x == 1 else 0)
+                df[col] = (df[col] == 1).astype(int) * idx
 
             df['Number_of_Defenders'] = df[defender_cols].sum(axis=1).astype(int)
             df.drop(columns=defender_cols, inplace=True)
