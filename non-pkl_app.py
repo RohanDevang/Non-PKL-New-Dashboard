@@ -741,8 +741,7 @@ if uploaded_file:
                 for idx in range(2, len(df)):
                     if df.at[idx, "Raid_Number"] == 3 and df.at[idx - 2, "Outcome"] != "Empty":
 
-                        print(f"❌ {df.at[idx - 2, 'Event_Number']}: → Outcome must be 'Empty' "
-                            f"(Because {df.at[idx, 'Event_Number']} has Raid_Number = 3)\n")
+                        print(f"❌ {df.at[idx - 2, 'Event_Number']}: → Outcome must be 'Empty' (Because {df.at[idx, 'Event_Number']} has Raid_Number = 3)\n")
                         errors_found = True
 
                 if not errors_found:
@@ -790,8 +789,7 @@ if uploaded_file:
                         prev_outcome = outcome_clean.iat[i - 2]
                         if not (prev_rn == 1 and prev_outcome == "empty"):
 
-                            print(f"❌ {df.at[i, 'Event_Number']} is Empty, but {df.at[i - 2, 'Event_Number']} "
-                                  f"has Raid_Number={prev_rn} and Outcome='{df.at[i - 2, 'Outcome']}'\n")
+                            print(f"❌ {df.at[i, 'Event_Number']} is Empty, but {df.at[i - 2, 'Event_Number']} has Raid_Number={prev_rn} and Outcome='{df.at[i - 2, 'Outcome']}'\n")
                             errors_found = True
 
                 if not errors_found:
@@ -886,30 +884,26 @@ if uploaded_file:
 
             def qc_14_skill_consistency(df) -> None:
                 """QC 14: Skill validation with 3 Skill columns."""
-
-                subset = df[(df["Outcome"] == "Successful") & (df["Bonus"] == "No") & (df["Number_of_Defenders_Self_Out"] == 0)].copy()
-
+            
+                subset = df[(df["Outcome"] == "Successful") &
+                            (df["Bonus"] == "No") &
+                            (df["Number_of_Defenders_Self_Out"] == 0)
+                ].copy()
+            
                 atk_na = _col_is_empty(subset["Attacking_Skill"])
                 def_na = _col_is_empty(subset["Defensive_Skill"])
                 ca_na = _col_is_empty(subset["Counter_Action_Skill"])
-
+            
                 # Case 1: All empty
                 all_empty = atk_na & def_na & ca_na
                 empty_rows = subset.loc[all_empty, "Event_Number"]
-
-                # Case 2: Defensive–Counter mismatch
-                mismatch_def_ca = def_na != ca_na
-                mismatch_rows = subset.loc[mismatch_def_ca, "Event_Number"]
-
-                if empty_rows.empty and mismatch_rows.empty:
+            
+                if empty_rows.empty:
                     print("QC 14: ✅ All rows are Valid.\n")
                     return
-
+            
                 for event in empty_rows:
                     print(f"❌ {event}: All Skill columns are Empty.\n")
-
-                for event in mismatch_rows:
-                    print(f"❌ {event}: Defensive & Counter Skill must both be filled or both be empty.\n")
 
 
             def qc_15_unsuccessful_needs_defensive_skill(df) -> None:
