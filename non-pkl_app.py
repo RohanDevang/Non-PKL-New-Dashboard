@@ -756,8 +756,7 @@ if uploaded_file:
                     if df.at[idx, "Raid_Number"] == 1 and df.at[idx, "Outcome"] == "Empty":
                         if idx + 2 < len(df) and df.at[idx + 2, "Raid_Number"] != 2:
 
-                            print(f"❌ {df.at[idx + 2, 'Event_Number']}: → Raid_Number must be = 2 "
-                                  f"(Because {df.at[idx, 'Event_Number']} Raid_Number is 1)\n")
+                            print(f"❌ {df.at[idx + 2, 'Event_Number']}: → Raid_Number must be = 2 (Because {df.at[idx, 'Event_Number']} has Raid Number = 1)\n")
                             errors_found = True
 
                 if not errors_found:
@@ -773,8 +772,7 @@ if uploaded_file:
                     if outcome_clean.iat[i] in {"successful", "unsuccessful"}:
                         if df.at[i + 2, "Raid_Number"] != 1:
 
-                            print(f"❌ {df.at[i + 2, 'Event_Number']}: Raid_Number must be 1 "
-                                  f"(because {df.at[i, 'Event_Number']} has Outcome='{df.at[i, 'Outcome']}')\n")
+                            print(f"❌ {df.at[i + 2, 'Event_Number']}: Raid_Number must be 1 (because {df.at[i, 'Event_Number']} has Outcome='{df.at[i, 'Outcome']}')\n")
                             errors_found = True
 
                 if not errors_found:
