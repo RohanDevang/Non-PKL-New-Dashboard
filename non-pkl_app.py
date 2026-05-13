@@ -756,7 +756,7 @@ if uploaded_file:
                     if df.at[idx, "Raid_Number"] == 1 and df.at[idx, "Outcome"] == "Empty":
                         if idx + 2 < len(df) and df.at[idx + 2, "Raid_Number"] != 2:
 
-                            print(f"❌ {df.at[idx + 2, 'Event_Number']}: → Raid_Number must be = 2 (Because {df.at[idx, 'Event_Number']} has Raid Number = 1)\n")
+                            print(f"❌ {df.at[idx + 2, 'Event_Number']}: → Raid_Number must be = 2 (Because {df.at[idx, 'Event_Number']} is Empty & Raid Number = 1)\n")
                             errors_found = True
 
                 if not errors_found:
