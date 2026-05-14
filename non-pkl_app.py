@@ -431,9 +431,11 @@ if uploaded_file:
             start_str = df['Start'].str.split(',').str[0]
             stop_str  = df['Stop'].str.split(',').str[0]
             
-            # Convert mm:ss → hh:mm:ss
-            start = pd.to_timedelta('00:' + start_str)
-            stop  = pd.to_timedelta('00:' + stop_str)
+            # Ensure hh:mm:ss format
+            fix = lambda s: s.where(s.str.count(':') == 2, '00:' + s)
+
+            start = pd.to_timedelta(fix(start_str))
+            stop  = pd.to_timedelta(fix(stop_str))
             
             # Duration in seconds
             dur = (stop - start).dt.total_seconds()
