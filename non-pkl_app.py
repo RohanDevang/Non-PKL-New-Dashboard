@@ -677,7 +677,7 @@ if uploaded_file:
                 if invalid.any():
                     for idx in df.index[invalid]:
                         bad = empty_mask.loc[idx][empty_mask.loc[idx]].index.tolist()
-                        print(f"\n❌ {df.at[idx, 'Event_Number']}: Empty in → {', '.join(bad)}")
+                        print(f"\n❌ {df.at[idx, 'Event_Number']}: Empty in → {', '.join(bad)}\n")
                 else:
                     print("\nQC 2: ✅ All rows are Valid.\n")
 
