@@ -646,7 +646,7 @@ if uploaded_file:
                 """QC 2: Key columns must not be Empty."""
                 required_cols = [
                     "Raid_Length", "Outcome", "Bonus", "All_Out", "Half","Raid_Number", "Raider_Name", "Number_of_Defenders",
-                    "Technical_Point_Raiding_Team", "Technical_Point_Defending_Team", "Tie_Break_Raids"]
+                    "Technical_Point_Raiding_Team", "Technical_Point_Defending_Team"]
                 
                 empty_mask = pd.DataFrame({c: _col_is_empty(df[c]) for c in required_cols})
                 invalid = empty_mask.any(axis=1)
