@@ -456,26 +456,28 @@ if uploaded_file:
             # ---------------- New Columns ----------------
             new_columns = [
                 # --- Extra Columns ---
-                'Video_Link', 'Event',                                                    # 2
-
+                'Video_Link', 'Event',                                                            # 2
+                
                 # --- TEAM RAID NUMBERING ---
                 'Team_Raid_Number', 'Defender_1', 'Defender_2',
                 'Defender_3', 'Defender_4', 'Defender_5',
-                'Defender_6', 'Defender_7',                                               # 8
+                'Defender_6', 'Defender_7',                                                       # 8
 
                 # --- TEAMS & PLAYERS IDENTIFICATION ---
                 'Raiding_Team_ID', 'Raiding_Team_Name',
-                'Defending_Team_ID', 'Defending_Team_Name', 'Raider_ID',                  # 5
+                'Defending_Team_ID', 'Defending_Team_Name', 'Raider_ID',                          # 5
 
                 # --- POINTS BREAKDOWN ---
                 'Raiding_Team_Points_Pre', 'Defending_Team_Points_Pre',
                 'Raiding_Touch_Points', 'Raiding_Bonus_Points',
-                'Raiding_Self_Out_Points', 'Raiding_All_Out_Points',
+                'Raiding_Self_Out_Points(Def(s)_Self_Outs)', 'Raiding_All_Out_Points',
+                'Raiding_Point_Extras'
                 'Defending_Capture_Points', 'Defending_Bonus_Points',
-                'Defending_Self_Out_Points', 'Defending_All_Out_Points',                  # 10
+                'Defending_Self_Out_Points(Raider_Self_Out)', 'Defending_All_Out_Points',
+                'Defending_Point_Extras'                                                          # 12
 
                 # --- RAID ACTION DETAILS ---
-                'Number_of_Raiders', 'Raider_Self_Out', 'Defenders_Touched_or_Caught'     # 3
+                'Number_of_Raiders', 'Raider_Self_Out', 'Defenders_Touched_or_Caught'              # 3
             ]
 
             # Add empty new columns
@@ -502,11 +504,13 @@ if uploaded_file:
             
                 # 5. Raiding Team Points
                 "Raiding_Team_Points", "Raiding_Touch_Points", "Raiding_Bonus_Points",
-                "Raiding_Self_Out_Points", "Raiding_All_Out_Points",
+                "Raiding_Self_Out_Points(Def(s)_Self_Outs)", "Raiding_All_Out_Points",
+                "Raiding_Point_Extras",
             
                 # 6. Defending Team Points
                 "Defending_Team_Points", "Defending_Capture_Points", "Defending_Bonus_Points",
-                "Defending_Self_Out_Points", "Defending_All_Out_Points",
+                "Defending_Self_Out_Points(Raider_Self_Out)", "Defending_All_Out_Points",
+                "Defending_Point_Extras",
             
                 # 7. Zone & Team Info
                 "Zone_of_Action", "Defending_Team_ID", "Defending_Team_Name",
@@ -548,8 +552,8 @@ if uploaded_file:
             # Update Raiding_All_Out_Points
             df["Raiding_All_Out_Points"] = (((df['Outcome'] == 'Successful') & (df["All_Out"] == 1)).astype(int) * 2)
             
-            # Raiding_Self_Out_Points
-            df['Raiding_Self_Out_Points'] = df['Number_of_Defenders_Self_Out']
+            # Raiding_Self_Out_Points(Def(s)_Self_Outs)
+            df['Raiding_Self_Out_Points(Def(s)_Self_Outs)'] = df['Number_of_Defenders_Self_Out']
 
             # Defending_Bonus_Points
             df['Defending_Bonus_Points'] = (((df['Number_of_Defenders'] <= 3) & (df['Outcome'] == 'Unsuccessful')).astype(int))
@@ -563,8 +567,8 @@ if uploaded_file:
             # Defending_All_Out_Points
             df["Defending_All_Out_Points"] = (((df['Outcome'] == 'Unsuccessful') & (df["All_Out"] == 1)).astype(int) * 2)
 
-            # Defending_Self_Out_Points
-            df['Defending_Self_Out_Points'] = df["Raider_Self_Out"]
+            # Defending_Self_Out_Points(Raider_Self_Out)
+            df['Defending_Self_Out_Points(Raider_Self_Out)'] = df["Raider_Self_Out"]
 
             # Copy Outcome to Event
             df['Event'] = df['Outcome']
@@ -575,6 +579,10 @@ if uploaded_file:
             # Convert Technical Points to numeric
             tech_cols = ["Technical_Point_Raiding_Team", "Technical_Point_Defending_Team"]
             df[tech_cols] = df[tech_cols].apply(pd.to_numeric, errors="coerce").astype("Int64")
+
+            # Calculate Each Team's Extra Points
+            df['Raiding_Point_Extras'] = df['Technical_Point_Raiding_Team'] + df['Raiding_Self_Out_Points(Def(s)_Self_Outs)']
+            df['Defending_Point_Extras'] = df['Technical_Point_Defending_Team'] + df['Defending_Self_Out_Points(Raider_Self_Out)']
 
 
             ######## Quality Check #########
@@ -788,11 +796,11 @@ if uploaded_file:
                         print(f"QC 9: ✅ All rows are Valid.\n")
 
                 _check(
-                    ["Raiding_Touch_Points", "Raiding_Bonus_Points", "Raiding_Self_Out_Points", "Raiding_All_Out_Points", "Technical_Point_Raiding_Team"],
+                    ["Raiding_Touch_Points", "Raiding_Bonus_Points", "Raiding_Self_Out_Points(Def(s)_Self_Outs)", "Raiding_All_Out_Points", "Technical_Point_Raiding_Team"],
                     "Raiding_Team_Points",
                     "Attacking Points")
                 _check(
-                    ["Defending_Capture_Points", "Defending_Bonus_Points", "Defending_Self_Out_Points", "Defending_All_Out_Points", "Technical_Point_Defending_Team"],
+                    ["Defending_Capture_Points", "Defending_Bonus_Points", "Defending_Self_Out_Points(Raider_Self_Out)", "Defending_All_Out_Points", "Technical_Point_Defending_Team"],
                     "Defending_Team_Points",
                     "Defensive Points")
 
@@ -811,19 +819,19 @@ if uploaded_file:
                         print(f"QC 10: ✅ All rows are Valid.\n")
 
                 _check("Successful",
-                      ["Raiding_Touch_Points", "Raiding_Bonus_Points", "Raiding_Self_Out_Points", "Raiding_All_Out_Points"],
+                      ["Raiding_Touch_Points", "Raiding_Bonus_Points", "Raiding_Self_Out_Points(Def(s)_Self_Outs)", "Raiding_All_Out_Points"],
                       "Attacking Points")
 
                 _check("Unsuccessful",
-                      ["Defending_Capture_Points", "Defending_Bonus_Points", "Defending_Self_Out_Points", "Defending_All_Out_Points"],
+                      ["Defending_Capture_Points", "Defending_Bonus_Points", "Defending_Self_Out_Points(Raider_Self_Out)", "Defending_All_Out_Points"],
                       "Defensive Points")
 
 
             def qc_11_defending_points_limit(df) -> None:
-                """QC 11: Defending_Self_Out_Points and Defending_Capture_Points must not exceed 1."""
+                """QC 11: Defending_Self_Out_Points(Raider_Self_Out) and Defending_Capture_Points must not exceed 1."""
                 errors_found = False
 
-                bad_self_out = df["Defending_Self_Out_Points"] > 1
+                bad_self_out = df["Defending_Self_Out_Points(Raider_Self_Out)"] > 1
                 if bad_self_out.any():
                     for msg in "❌ " + df.loc[bad_self_out, "Event_Number"].astype(str) + "  Check 'Raider self out'\n":
                         print(msg)
@@ -1088,13 +1096,13 @@ if uploaded_file:
 
                 for _, row in df.iterrows():
                     # Rule 1: 'Defender self out' needs Number_of_Defenders_Self_Out > 0
-                    if (row["Attacking_Skill"] == "Defender self out" and row["Number_of_Defenders_Self_Out"] == 0 and row["Raiding_Self_Out_Points"] == 0):
+                    if (row["Attacking_Skill"] == "Defender self out" and row["Number_of_Defenders_Self_Out"] == 0 and row["Raiding_Self_Out_Points(Def(s)_Self_Outs)"] == 0):
 
                         print(f"❌ {row['Event_Number']}: 'Defender self out' requires 'Number of Defenders Self Out' > 0.\n")
                         qc_failed = True
 
                     # Rule 2: Touch + Self-out points shouldn't coexist with 'Defender self out'
-                    if (row["Raiding_Touch_Points"] >= 1 and row["Raiding_Self_Out_Points"] >= 1 and row["Attacking_Skill"] == "Defender self out"):
+                    if (row["Raiding_Touch_Points"] >= 1 and row["Raiding_Self_Out_Points(Def(s)_Self_Outs)"] >= 1 and row["Attacking_Skill"] == "Defender self out"):
 
                         print(f"❌ {row['Event_Number']}: 'Attacking Skill' Must not be 'Defender Self Out'\n")
                         qc_failed = True
