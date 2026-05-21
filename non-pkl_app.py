@@ -471,10 +471,10 @@ if uploaded_file:
                 'Raiding_Team_Points_Pre', 'Defending_Team_Points_Pre',
                 'Raiding_Touch_Points', 'Raiding_Bonus_Points',
                 'Raiding_Self_Out_Points(Def(s)_Self_Outs)', 'Raiding_All_Out_Points',
-                'Raiding_Point_Extras'
+                'Raiding_Point_Extras',
                 'Defending_Capture_Points', 'Defending_Bonus_Points',
                 'Defending_Self_Out_Points(Raider_Self_Out)', 'Defending_All_Out_Points',
-                'Defending_Point_Extras'                                                          # 12
+                'Defending_Point_Extras',                                                          # 12
 
                 # --- RAID ACTION DETAILS ---
                 'Number_of_Raiders', 'Raider_Self_Out', 'Defenders_Touched_or_Caught'              # 3
