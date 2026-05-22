@@ -102,7 +102,6 @@ if uploaded_file:
 
             # =========================================================================
             # START: Part 2 - Transformation and QCs
-            # This part now uses the 'df' from above instead of reading a new file.
             # =========================================================================
             
             # ---------------- Drop unused columns ----------------
@@ -459,9 +458,8 @@ if uploaded_file:
                 'Video_Link', 'Event',                                                            # 2
                 
                 # --- TEAM RAID NUMBERING ---
-                'Team_Raid_Number', 'Defender_1', 'Defender_2',
-                'Defender_3', 'Defender_4', 'Defender_5',
-                'Defender_6', 'Defender_7',                                                       # 8
+                'Team_Raid_Number', 'Defender_1', 'Defender_2', 'Defender_3',
+                'Defender_4', 'Defender_5', 'Defender_6', 'Defender_7',                                                       # 8
 
                 # --- TEAMS & PLAYERS IDENTIFICATION ---
                 'Raiding_Team_ID', 'Raiding_Team_Name',
@@ -525,7 +523,7 @@ if uploaded_file:
                 "Raider_Self_Out", "Attacking_Skill", "Defensive_Skill",
                 "QoD_Skill", "Counter_Action_Skill",
             
-                # 10. Metadata
+                # 10. Extras
                 "Event", "Technical_Point_Raiding_Team", "Technical_Point_Defending_Team",
                 "All_Out", "Video_Link"
             ]
