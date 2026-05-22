@@ -472,9 +472,8 @@ if uploaded_file:
                 'Raiding_Touch_Points', 'Raiding_Bonus_Points',
                 'Raiding_Self_Out_Points(Def(s)_Self_Outs)', 'Raiding_All_Out_Points',
                 'Raiding_Point_Extras',
-                'Defending_Capture_Points', 'Defending_Bonus_Points',
-                'Defending_Self_Out_Points(Raider_Self_Out)', 'Defending_All_Out_Points',
-                'Defending_Point_Extras',                                                          # 12
+                'Defending_Capture_Points', 'Defending_Self_Out_Points(Raider_Self_Out)',
+                'Defending_All_Out_Points', 'Defending_Point_Extras',                            # 11
 
                 # --- RAID ACTION DETAILS ---
                 'Number_of_Raiders', 'Raider_Self_Out', 'Defenders_Touched_or_Caught'              # 3
@@ -508,7 +507,7 @@ if uploaded_file:
                 "Raiding_Point_Extras",
             
                 # 6. Defending Team Points
-                "Defending_Team_Points", "Defending_Capture_Points", "Defending_Bonus_Points",
+                "Defending_Team_Points", "Defending_Capture_Points",
                 "Defending_Self_Out_Points(Raider_Self_Out)", "Defending_All_Out_Points",
                 "Defending_Point_Extras",
             
@@ -555,20 +554,20 @@ if uploaded_file:
             # Raiding_Self_Out_Points(Def(s)_Self_Outs)
             df['Raiding_Self_Out_Points(Def(s)_Self_Outs)'] = df['Number_of_Defenders_Self_Out']
 
-            # Defending_Bonus_Points
-            df['Defending_Bonus_Points'] = (((df['Number_of_Defenders'] <= 3) & (df['Outcome'] == 'Unsuccessful')).astype(int))
-
             # Raider_Self_Out (helper col for defense logic)
             df["Raider_Self_Out"] = (df["Defensive_Skill"] == "Raider self out").astype(int)
 
             # Defending_Capture_Points
-            df['Defending_Capture_Points'] = (((df['Outcome'] == 'Unsuccessful') & (df['Raider_Self_Out'] == 0)).astype(int))
+            df['Defending_Capture_Points'] = (
+                (((df['Outcome'] == 'Unsuccessful') & (df['Raider_Self_Out'] == 0)).astype(int)) + 
+                (((df['Outcome'] == 'Unsuccessful') & (df['Raider_Self_Out'] == 0) & (df['Number_of_Defenders'] <= 3)).astype(int)))
 
             # Defending_All_Out_Points
             df["Defending_All_Out_Points"] = (((df['Outcome'] == 'Unsuccessful') & (df["All_Out"] == 1)).astype(int) * 2)
 
             # Defending_Self_Out_Points(Raider_Self_Out)
-            df['Defending_Self_Out_Points(Raider_Self_Out)'] = df["Raider_Self_Out"]
+            df['Defending_Self_Out_Points(Raider_Self_Out)'] = df["Raider_Self_Out"] + (
+                (((df['Outcome'] == 'Unsuccessful') & (df['Raider_Self_Out'] == 1) & (df['Number_of_Defenders'] <= 3)).astype(int)))
 
             # Copy Outcome to Event
             df['Event'] = df['Outcome']
@@ -800,7 +799,7 @@ if uploaded_file:
                     "Raiding_Team_Points",
                     "Attacking Points")
                 _check(
-                    ["Defending_Capture_Points", "Defending_Bonus_Points", "Defending_Self_Out_Points(Raider_Self_Out)", "Defending_All_Out_Points", "Technical_Point_Defending_Team"],
+                    ["Defending_Capture_Points", "Defending_Self_Out_Points(Raider_Self_Out)", "Defending_All_Out_Points", "Technical_Point_Defending_Team"],
                     "Defending_Team_Points",
                     "Defensive Points")
 
@@ -823,23 +822,39 @@ if uploaded_file:
                       "Attacking Points")
 
                 _check("Unsuccessful",
-                      ["Defending_Capture_Points", "Defending_Bonus_Points", "Defending_Self_Out_Points(Raider_Self_Out)", "Defending_All_Out_Points"],
+                      ["Defending_Capture_Points", "Defending_Self_Out_Points(Raider_Self_Out)", "Defending_All_Out_Points"],
                       "Defensive Points")
 
 
             def qc_11_defending_points_limit(df) -> None:
-                """QC 11: Defending_Self_Out_Points(Raider_Self_Out) and Defending_Capture_Points must not exceed 1."""
+                """QC 11: Validate Defending_Self_Out_Points and Defending_Capture_Points match expected logic."""
                 errors_found = False
 
-                bad_self_out = df["Defending_Self_Out_Points(Raider_Self_Out)"] > 1
+                # --- Expected values for Defending_Self_Out_Points(Raider_Self_Out) ---
+                cond_self_out_1 = (df['Outcome'] == 'Unsuccessful') & (df['Raider_Self_Out'] == 1) & (df['Number_of_Defenders'] > 3)
+                cond_self_out_2 = (df['Outcome'] == 'Unsuccessful') & (df['Raider_Self_Out'] == 1) & (df['Number_of_Defenders'] <= 3)
+
+                expected_self_out = pd.Series(0, index=df.index)
+                expected_self_out[cond_self_out_1] = 1
+                expected_self_out[cond_self_out_2] = 2
+
+                bad_self_out = df["Defending_Self_Out_Points(Raider_Self_Out)"] != expected_self_out
                 if bad_self_out.any():
-                    for msg in "❌ " + df.loc[bad_self_out, "Event_Number"].astype(str) + "  Check 'Raider self out'\n":
+                    for msg in ("❌ " + df.loc[bad_self_out, "Event_Number"].astype(str) + "  Check 'Raider self out'\n"):
                         print(msg)
                     errors_found = True
 
-                bad_capture = df["Defending_Capture_Points"] > 1
+                # --- Expected values for Defending_Capture_Points ---
+                cond_capture_1 = (df['Outcome'] == 'Unsuccessful') & (df['Raider_Self_Out'] == 0) & (df['Number_of_Defenders'] > 3)
+                cond_capture_2 = (df['Outcome'] == 'Unsuccessful') & (df['Raider_Self_Out'] == 0) & (df['Number_of_Defenders'] <= 3)
+
+                expected_capture = pd.Series(0, index=df.index)
+                expected_capture[cond_capture_1] = 1
+                expected_capture[cond_capture_2] = 2
+
+                bad_capture = df["Defending_Capture_Points"] != expected_capture
                 if bad_capture.any():
-                    for msg in "❌ " + df.loc[bad_capture, "Event_Number"].astype(str) + "  Check 'Defensive Points'\n":
+                    for msg in ("❌ " + df.loc[bad_capture, "Event_Number"].astype(str) + "  Check 'Defensive Points'\n"):
                         print(msg)
                     errors_found = True
 
@@ -852,7 +867,8 @@ if uploaded_file:
                 bad = df["Raid_Length"] <= 2
                 if bad.any():
                     for idx in df.index[bad]:
-                        print(f"⚠️ {df.at[idx, 'Event_Number']}: 'Raid Length' is {df.at[idx, 'Raid_Length']}\n")
+                        icon = "❌" if df.at[idx, "Raid_Length"] == 0 else "⚠️"
+                        print(f"{icon} {df.at[idx, 'Event_Number']}: 'Raid Length' is {df.at[idx, 'Raid_Length']}\n")
                 else:
                     print("QC 12: ✅ All rows are Valid.\n")
 
