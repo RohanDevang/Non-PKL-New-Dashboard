@@ -468,8 +468,8 @@ if uploaded_file:
                 # --- POINTS BREAKDOWN ---
                 'Raiding_Team_Points_Pre', 'Defending_Team_Points_Pre',
                 'Raiding_Touch_Points', 'Raiding_Bonus_Points',
-                'Def_SelfOut_Pts', 'Raiding_All_Out_Points', 'Raid_Point_Extras',
-                'Defending_Capture_Points', 'Raid_SelfOut_Pts',
+                'Defender_SelfOut_Pts', 'Raiding_All_Out_Points', 'Raid_Point_Extras',
+                'Defending_Capture_Points', 'Raider_SelfOut_Pts',
                 'Defending_All_Out_Points', 'Defending_Point_Extras',                            # 11
 
                 # --- RAID ACTION DETAILS ---
@@ -500,10 +500,10 @@ if uploaded_file:
             
                 # 5. Raiding Team Points
                 "Raiding_Team_Points", "Raiding_Touch_Points", "Raiding_Bonus_Points",
-                "Def_SelfOut_Pts", "Raiding_All_Out_Points", "Raid_Point_Extras",
+                "Defender_SelfOut_Pts", "Raiding_All_Out_Points", "Raid_Point_Extras",
             
                 # 6. Defending Team Points
-                "Defending_Team_Points", "Defending_Capture_Points", "Raid_SelfOut_Pts",
+                "Defending_Team_Points", "Defending_Capture_Points", "Raider_SelfOut_Pts",
                 "Defending_All_Out_Points", "Defending_Point_Extras",
             
                 # 7. Zone & Def Team Info
@@ -546,8 +546,8 @@ if uploaded_file:
             # Update Raiding_All_Out_Points
             df["Raiding_All_Out_Points"] = (((df['Outcome'] == 'Successful') & (df["All_Out"] == 1)).astype(int) * 2)
             
-            # Def_SelfOut_Pts
-            df['Def_SelfOut_Pts'] = df['Defenders_Self_Out']
+            # Defender_SelfOut_Pts
+            df['Defender_SelfOut_Pts'] = df['Defenders_Self_Out']
 
             # Raider_Self_Out (helper col for defense logic)
             df["Raider_Self_Out"] = (df["Defensive_Skill"] == "Raider self out").astype(int)
@@ -560,8 +560,8 @@ if uploaded_file:
             # Defending_All_Out_Points
             df["Defending_All_Out_Points"] = (((df['Outcome'] == 'Unsuccessful') & (df["All_Out"] == 1)).astype(int) * 2)
 
-            # Raid_SelfOut_Pts
-            df['Raid_SelfOut_Pts'] = df["Raider_Self_Out"] + (
+            # Raider_SelfOut_Pts
+            df['Raider_SelfOut_Pts'] = df["Raider_Self_Out"] + (
                 (((df['Outcome'] == 'Unsuccessful') & (df['Raider_Self_Out'] == 1) & (df['Number_of_Defenders'] <= 3)).astype(int)))
 
             # Copy Outcome to Event
@@ -575,8 +575,8 @@ if uploaded_file:
             df[tech_cols] = df[tech_cols].apply(pd.to_numeric, errors="coerce").astype("Int64")
 
             # Calculate Each Team's Extra Points
-            df['Raid_Point_Extras'] = df['Technical_Point_Raid_Team'] + df['Def_SelfOut_Pts']
-            df['Defending_Point_Extras'] = df['Technical_Point_Def_Team'] + df['Raid_SelfOut_Pts']
+            df['Raid_Point_Extras'] = df['Technical_Point_Raid_Team'] + df['Defender_SelfOut_Pts']
+            df['Defending_Point_Extras'] = df['Technical_Point_Def_Team'] + df['Raider_SelfOut_Pts']
 
 
             ######## Quality Check #########
@@ -790,11 +790,11 @@ if uploaded_file:
                         print(f"QC 9: ✅ All rows are Valid.\n")
 
                 _check(
-                    ["Raiding_Touch_Points", "Raiding_Bonus_Points", "Def_SelfOut_Pts", "Raiding_All_Out_Points", "Technical_Point_Raid_Team"],
+                    ["Raiding_Touch_Points", "Raiding_Bonus_Points", "Defender_SelfOut_Pts", "Raiding_All_Out_Points", "Technical_Point_Raid_Team"],
                     "Raiding_Team_Points",
                     "Attacking Points")
                 _check(
-                    ["Defending_Capture_Points", "Raid_SelfOut_Pts", "Defending_All_Out_Points", "Technical_Point_Def_Team"],
+                    ["Defending_Capture_Points", "Raider_SelfOut_Pts", "Defending_All_Out_Points", "Technical_Point_Def_Team"],
                     "Defending_Team_Points",
                     "Defensive Points")
 
@@ -813,11 +813,11 @@ if uploaded_file:
                         print(f"QC 10: ✅ All rows are Valid.\n")
 
                 _check("Successful",
-                      ["Raiding_Touch_Points", "Raiding_Bonus_Points", "Def_SelfOut_Pts", "Raiding_All_Out_Points"],
+                      ["Raiding_Touch_Points", "Raiding_Bonus_Points", "Defender_SelfOut_Pts", "Raiding_All_Out_Points"],
                       "Attacking Points")
 
                 _check("Unsuccessful",
-                      ["Defending_Capture_Points", "Raid_SelfOut_Pts", "Defending_All_Out_Points"],
+                      ["Defending_Capture_Points", "Raider_SelfOut_Pts", "Defending_All_Out_Points"],
                       "Defensive Points")
 
 
@@ -825,7 +825,7 @@ if uploaded_file:
                 """QC 11: Validate Defending_Self_Out_Points and Defending_Capture_Points match expected logic."""
                 errors_found = False
 
-                # --- Expected values for Raid_SelfOut_Pts ---
+                # --- Expected values for Raider_SelfOut_Pts ---
                 cond_self_out_1 = (df['Outcome'] == 'Unsuccessful') & (df['Raider_Self_Out'] == 1) & (df['Number_of_Defenders'] > 3)
                 cond_self_out_2 = (df['Outcome'] == 'Unsuccessful') & (df['Raider_Self_Out'] == 1) & (df['Number_of_Defenders'] <= 3)
 
@@ -833,7 +833,7 @@ if uploaded_file:
                 expected_self_out[cond_self_out_1] = 1
                 expected_self_out[cond_self_out_2] = 2
 
-                bad_self_out = df["Raid_SelfOut_Pts"] != expected_self_out
+                bad_self_out = df["Raider_SelfOut_Pts"] != expected_self_out
                 if bad_self_out.any():
                     for msg in ("❌ " + df.loc[bad_self_out, "Event_Number"].astype(str) + "  Check 'Raider self out'\n"):
                         print(msg)
@@ -1107,13 +1107,13 @@ if uploaded_file:
 
                 for _, row in df.iterrows():
                     # Rule 1: 'Defender self out' needs Defenders_Self_Out > 0
-                    if (row["Attacking_Skill"] == "Defender self out" and row["Defenders_Self_Out"] == 0 and row["Def_SelfOut_Pts"] == 0):
+                    if (row["Attacking_Skill"] == "Defender self out" and row["Defenders_Self_Out"] == 0 and row["Defender_SelfOut_Pts"] == 0):
 
                         print(f"❌ {row['Event_Number']}: 'Defender self out' requires 'Number of Defenders Self Out' > 0.\n")
                         qc_failed = True
 
                     # Rule 2: Touch + Self-out points shouldn't coexist with 'Defender self out'
-                    if (row["Raiding_Touch_Points"] >= 1 and row["Def_SelfOut_Pts"] >= 1 and row["Attacking_Skill"] == "Defender self out"):
+                    if (row["Raiding_Touch_Points"] >= 1 and row["Defender_SelfOut_Pts"] >= 1 and row["Attacking_Skill"] == "Defender self out"):
 
                         print(f"❌ {row['Event_Number']}: 'Attacking Skill' Must not be 'Defender Self Out'\n")
                         qc_failed = True
