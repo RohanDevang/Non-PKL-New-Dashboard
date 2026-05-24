@@ -468,7 +468,7 @@ if uploaded_file:
                 # --- POINTS BREAKDOWN ---
                 'Raiding_Team_Points_Pre', 'Defending_Team_Points_Pre',
                 'Raiding_Touch_Points', 'Raiding_Bonus_Points',
-                'Defender_SelfOut_Pts', 'Raiding_All_Out_Points', 'Raid_Point_Extras',
+                'Defender_SelfOut_Pts', 'Raiding_All_Out_Points', 'Raiding_Point_Extras',
                 'Defending_Capture_Points', 'Raider_SelfOut_Pts',
                 'Defending_All_Out_Points', 'Defending_Point_Extras',                            # 11
 
@@ -500,7 +500,7 @@ if uploaded_file:
             
                 # 5. Raiding Team Points
                 "Raiding_Team_Points", "Raiding_Touch_Points", "Raiding_Bonus_Points",
-                "Defender_SelfOut_Pts", "Raiding_All_Out_Points", "Raid_Point_Extras",
+                "Defender_SelfOut_Pts", "Raiding_All_Out_Points", "Raiding_Point_Extras",
             
                 # 6. Defending Team Points
                 "Defending_Team_Points", "Defending_Capture_Points", "Raider_SelfOut_Pts",
@@ -575,7 +575,7 @@ if uploaded_file:
             df[tech_cols] = df[tech_cols].apply(pd.to_numeric, errors="coerce").astype("Int64")
 
             # Calculate Each Team's Extra Points
-            df['Raid_Point_Extras'] = df['Technical_Point_Raid_Team'] + df['Defender_SelfOut_Pts']
+            df['Raiding_Point_Extras'] = df['Technical_Point_Raid_Team'] + df['Defender_SelfOut_Pts']
             df['Defending_Point_Extras'] = df['Technical_Point_Def_Team'] + df['Raider_SelfOut_Pts']
 
 
